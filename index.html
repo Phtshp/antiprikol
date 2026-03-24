@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Antiprikol</title>
+<style>
+* {
+    box-sizing: border-box;
+}
+body {
+    margin:0;
+    font-family:Segoe UI, Arial, sans-serif;
+    background:#000;
+    color:#ddd;
+}
+.topbar {
+    background:#0b0b0b;
+    padding:15px 20px;
+    border-bottom:1px solid #222;
+}
+.label {
+    font-size:14px;
+    margin-bottom:6px;
+    color:#aaa;
+}
+.editor-container {
+    position: relative;
+    width: 100%;
+    font-size:14px;
+    line-height: 1.5em;
+    font-family:Segoe UI, Arial, sans-serif;
+}
+#highlighted {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    padding:10px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    color:#eee;
+    z-index:0;
+    line-height: 1.5em;
+    display: block;
+}
+#highlighted .highlight {
+    background:#b30000;
+    color:white;
+}
+textarea {
+    position: relative;
+    width: 100%;
+    padding:10px;
+    font-size:14px;
+    font-family:Segoe UI, Arial, sans-serif;
+    line-height:1.5em;
+    font-weight: normal;
+    font-style: normal;
+    background: transparent;
+    border:1px solid #333;
+    color: transparent;
+    caret-color: white;
+    resize: vertical;
+    z-index:1;
+    overflow-wrap: break-word;
+    overflow: auto;
+    display:block;
+}
+.buttons {
+    margin-top:10px;
+}
+button {
+    background:#111;
+    border:1px solid #333;
+    color:#ddd;
+    padding:6px 12px;
+    margin-right:6px;
+    cursor:pointer;
+}
+button:hover {
+    background:#222;
+}
+.container {
+    padding:20px;
+}
+.panel {
+    background:#050505;
+    border:1px solid #222;
+    padding:15px;
+    margin-bottom:15px;
+    min-height:80px;
+    white-space:pre-wrap;
+    overflow-wrap: break-word;
+    overflow-x:auto;
+}
+.fixed {
+    background:#021902;
+}
+.title {
+    margin-bottom:6px;
+    color:#aaa;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+<div class="label">Текст для проверки</div>
+<div class="editor-container">
+    <div id="highlighted"></div>
+    <textarea id="input" placeholder="Вставьте текст..."></textarea>
+</div>
+<div class="buttons">
+<button onclick="clearText()">Очистить</button>
+<button onclick="copyText()">Копировать текст</button>
+</div>
+</div>
+
+<div class="container">
+<div class="title">Исправленный текст</div>
+<div id="fixed" class="panel fixed"></div>
+
+<div class="title">Режим команд</div>
+<div id="command" class="panel fixed"></div>
+</div>
+
+<script>
+const input = document.getElementById("input");
+const highlighted = document.getElementById("highlighted");
+const fixed = document.getElementById("fixed");
+const commandDiv = document.getElementById("command");
+
+const visualMap = {
+    'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
+    'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
+};
+const russian = /[а-яА-ЯёЁ]/g;
+
+function escapeHtml(text) {
+    return text.replace(/&/g,"&amp;")
+               .replace(/</g,"&lt;")
+               .replace(/>/g,"&gt;");
+}
+
+function update(){
+    const text = input.value;
+
+    // Подсветка русских букв
+    const highlightedText = escapeHtml(text).replace(russian, char =>
+        `<span class="highlight">${char}</span>`
+    );
+    highlighted.innerHTML = highlightedText.replace(/\n/g,'<br>');
+
+    // Исправленный текст — только визуально совпадающие буквы
+    const fixedText = text.replace(russian, char => visualMap[char] || char);
+    fixed.textContent = fixedText || "—";
+
+    // Режим команд — объединяем строки через &&
+    const commandText = fixedText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0).join(" && ");
+    commandDiv.textContent = commandText || "—";
+
+    // Подгоняем высоту подсветки под содержимое textarea
+    highlighted.style.height = input.scrollHeight + "px";
+}
+
+// Синхронизация скролла
+input.addEventListener('scroll', ()=>{
+    highlighted.scrollTop = input.scrollTop;
+    highlighted.scrollLeft = input.scrollLeft;
+});
+input.addEventListener('input', ()=>{
+    update();
+});
+window.addEventListener('resize', update);
+
+function clearText(){
+    input.value="";
+    update();
+}
+
+function copyText(){
+    navigator.clipboard.writeText(fixed.textContent);
+}
+
+// Инициализация
+update();
+</script>
+</body>
+</html>
