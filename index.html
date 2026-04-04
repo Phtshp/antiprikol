@@ -2,74 +2,54 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Antiprikol</title>
+<title>Новая вкладка</title>
+
 <style>
-* {
-    box-sizing: border-box;
-}
-body {
+* { box-sizing: border-box; }
+
+body{
     margin:0;
     font-family:Segoe UI, Arial, sans-serif;
     background:#000;
     color:#ddd;
 }
-.topbar {
+
+.topbar{
     background:#0b0b0b;
     padding:15px 20px;
     border-bottom:1px solid #222;
 }
-.label {
+
+.label{
     font-size:14px;
     margin-bottom:6px;
     color:#aaa;
 }
-.editor-container {
-    position: relative;
-    width: 100%;
-    font-size:14px;
-    line-height: 1.5em;
-    font-family:Segoe UI, Arial, sans-serif;
-}
-#highlighted {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    padding:10px;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    color:#eee;
-    z-index:0;
-    line-height: 1.5em;
-    display: block;
-}
-#highlighted .highlight {
-    background:#b30000;
-    color:white;
-}
-textarea {
-    position: relative;
-    width: 100%;
-    padding:10px;
-    font-size:14px;
-    font-family:Segoe UI, Arial, sans-serif;
-    line-height:1.5em;
-    font-weight: normal;
-    font-style: normal;
-    background: transparent;
+
+.editor{
+    width:100%;
+    min-height:160px;
+    background:#111;
     border:1px solid #333;
-    color: transparent;
-    caret-color: white;
-    resize: vertical;
-    z-index:1;
-    overflow-wrap: break-word;
-    overflow: auto;
-    display:block;
+    color:#eee;
+    padding:10px;
+    font-size:14px;
+    line-height:1.5em;
+    outline:none;
+    white-space:pre-wrap;
+    overflow-wrap:break-word;
 }
-.buttons {
+
+.highlight{
+    background:#b30000;
+    color:#fff;
+}
+
+.buttons{
     margin-top:10px;
 }
-button {
+
+button, select{
     background:#111;
     border:1px solid #333;
     color:#ddd;
@@ -77,104 +57,145 @@ button {
     margin-right:6px;
     cursor:pointer;
 }
-button:hover {
+
+button:hover, select:hover{
     background:#222;
 }
-.container {
+
+.container{
     padding:20px;
 }
-.panel {
+
+.panel{
     background:#050505;
     border:1px solid #222;
     padding:15px;
     margin-bottom:15px;
-    min-height:80px;
     white-space:pre-wrap;
-    overflow-wrap: break-word;
-    overflow-x:auto;
+    overflow-wrap:break-word;
 }
-.fixed {
+
+.fixed{
     background:#021902;
 }
-.title {
+
+.title{
     margin-bottom:6px;
     color:#aaa;
 }
 </style>
 </head>
+
 <body>
 
 <div class="topbar">
-<div class="label">Текст для проверки</div>
-<div class="editor-container">
-    <div id="highlighted"></div>
-    <textarea id="input" placeholder="Вставьте текст..."></textarea>
-</div>
+<div class="label">Текст для изменений</div>
+
+<div id="editor" class="editor" contenteditable="true"></div>
+
 <div class="buttons">
+<select id="mode">
+    <option value="ru-en">RU → EN</option>
+    <option value="en-ru">EN → RU</option>
+</select>
+
 <button onclick="clearText()">Очистить</button>
 <button onclick="copyText()">Копировать текст</button>
 </div>
 </div>
 
 <div class="container">
-<div class="title">Исправленный текст</div>
+
+<div class="title">Изменённый текст</div>
 <div id="fixed" class="panel fixed"></div>
 
 <div class="title">Режим команд</div>
 <div id="command" class="panel fixed"></div>
+
 </div>
 
 <script>
-const input = document.getElementById("input");
-const highlighted = document.getElementById("highlighted");
+const editor = document.getElementById("editor");
 const fixed = document.getElementById("fixed");
 const commandDiv = document.getElementById("command");
+const modeSelect = document.getElementById("mode");
 
-const visualMap = {
+// карты
+const ruToEn = {
     'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
     'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
 };
+
+const enToRu = {
+    'A':'А','B':'В','E':'Е','K':'К','M':'М','H':'Н','O':'О','P':'Р','C':'С','T':'Т','X':'Х','Y':'У','Z':'З',
+    'a':'а','b':'в','e':'е','k':'к','m':'м','h':'н','o':'о','p':'р','c':'с','t':'т','x':'х','y':'у','z':'з'
+};
+
 const russian = /[а-яА-ЯёЁ]/g;
 
-function escapeHtml(text) {
-    return text.replace(/&/g,"&amp;")
-               .replace(/</g,"&lt;")
-               .replace(/>/g,"&gt;");
+function getText() {
+    return editor.innerText;
+}
+
+function setCaretToEnd(el){
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
 }
 
 function update(){
-    const text = input.value;
+    const text = getText();
+    const mode = modeSelect.value;
 
-    // Подсветка русских букв
-    const highlightedText = escapeHtml(text).replace(russian, char =>
-        `<span class="highlight">${char}</span>`
-    );
-    highlighted.innerHTML = highlightedText.replace(/\n/g,'<br>');
+    let highlightedHTML = "";
+    let fixedText = "";
 
-    // Исправленный текст — только визуально совпадающие буквы
-    const fixedText = text.replace(russian, char => visualMap[char] || char);
+    for (let char of text) {
+
+        let replaced = char;
+
+        if (mode === "ru-en") {
+            if (ruToEn[char]) {
+                replaced = ruToEn[char];
+                highlightedHTML += `<span class="highlight">${char}</span>`;
+            } else {
+                highlightedHTML += char;
+            }
+        } else {
+            if (enToRu[char]) {
+                replaced = enToRu[char];
+                highlightedHTML += `<span class="highlight">${char}</span>`;
+            } else {
+                highlightedHTML += char;
+            }
+        }
+
+        fixedText += replaced;
+    }
+
+    // сохраняем позицию курсора (упрощённо — в конец)
+    editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>");
+    setCaretToEnd(editor);
+
     fixed.textContent = fixedText || "—";
 
-    // Режим команд — объединяем строки через &&
-    const commandText = fixedText.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0).join(" && ");
-    commandDiv.textContent = commandText || "—";
+    const commandText = fixedText
+        .split(/\r?\n/)
+        .map(l=>l.trim())
+        .filter(Boolean)
+        .join(" && ");
 
-    // Подгоняем высоту подсветки под содержимое textarea
-    highlighted.style.height = input.scrollHeight + "px";
+    commandDiv.textContent = commandText || "—";
 }
 
-// Синхронизация скролла
-input.addEventListener('scroll', ()=>{
-    highlighted.scrollTop = input.scrollTop;
-    highlighted.scrollLeft = input.scrollLeft;
-});
-input.addEventListener('input', ()=>{
-    update();
-});
-window.addEventListener('resize', update);
+editor.addEventListener("input", update);
+modeSelect.addEventListener("change", update);
 
 function clearText(){
-    input.value="";
+    editor.innerHTML="";
     update();
 }
 
@@ -182,8 +203,8 @@ function copyText(){
     navigator.clipboard.writeText(fixed.textContent);
 }
 
-// Инициализация
 update();
 </script>
+
 </body>
 </html>
