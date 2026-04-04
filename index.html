@@ -106,10 +106,10 @@ button:hover, select:hover{
 
 <div class="container">
 
-<div class="title">Изменённый текст</div>
+<div class="title">Текст с изменениями</div>
 <div id="fixed" class="panel fixed"></div>
 
-<div class="title">Режим команд</div>
+<div class="title">Команды</div>
 <div id="command" class="panel fixed"></div>
 
 </div>
@@ -120,18 +120,17 @@ const fixed = document.getElementById("fixed");
 const commandDiv = document.getElementById("command");
 const modeSelect = document.getElementById("mode");
 
-// карты
+// RU → EN 
 const ruToEn = {
     'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
     'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
 };
 
+// EN → RU
 const enToRu = {
-    'A':'А','B':'В','E':'Е','K':'К','M':'М','H':'Н','O':'О','P':'Р','C':'С','T':'Т','X':'Х','Y':'У','Z':'З',
-    'a':'а','b':'в','e':'е','k':'к','m':'м','h':'н','o':'о','p':'р','c':'с','t':'т','x':'х','y':'у','z':'з'
+    'a':'а','o':'о','e':'е','y':'у','c':'с',
+    'A':'А','O':'О','E':'Е','Y':'У','C':'С'
 };
-
-const russian = /[а-яА-ЯёЁ]/g;
 
 function getText() {
     return editor.innerText;
@@ -156,27 +155,30 @@ function update(){
     for (let char of text) {
 
         let replaced = char;
+        let changed = false;
 
         if (mode === "ru-en") {
             if (ruToEn[char]) {
                 replaced = ruToEn[char];
-                highlightedHTML += `<span class="highlight">${char}</span>`;
-            } else {
-                highlightedHTML += char;
+                changed = true;
             }
         } else {
             if (enToRu[char]) {
                 replaced = enToRu[char];
-                highlightedHTML += `<span class="highlight">${char}</span>`;
-            } else {
-                highlightedHTML += char;
+                changed = true;
             }
+        }
+
+        // подсветка только изменяемых букв
+        if (changed) {
+            highlightedHTML += `<span class="highlight">${char}</span>`;
+        } else {
+            highlightedHTML += char;
         }
 
         fixedText += replaced;
     }
 
-    // сохраняем позицию курсора (упрощённо — в конец)
     editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>");
     setCaretToEnd(editor);
 
