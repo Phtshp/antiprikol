@@ -31,13 +31,14 @@ body{
     min-height:160px;
     background:#111;
     border:1px solid #333;
-    color:#eee;
+    color:transparent;
     padding:10px;
     font-size:14px;
     line-height:1.5em;
     outline:none;
     white-space:pre-wrap;
     overflow-wrap:break-word;
+    caret-color:#fff;
 }
 
 .highlight{
@@ -101,6 +102,7 @@ button:hover, select:hover{
 
 <button onclick="clearText()">Очистить</button>
 <button onclick="copyText()">Копировать текст</button>
+<button onclick="copyWithChanges()">Копировать с изменениями</button>
 </div>
 </div>
 
@@ -120,19 +122,17 @@ const fixed = document.getElementById("fixed");
 const commandDiv = document.getElementById("command");
 const modeSelect = document.getElementById("mode");
 
-// RU → EN 
 const ruToEn = {
     'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
     'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
 };
 
-// EN → RU
 const enToRu = {
     'a':'а','o':'о','e':'е','y':'у','c':'с',
     'A':'А','O':'О','E':'Е','Y':'У','C':'С'
 };
 
-function getText() {
+function getText(){
     return editor.innerText;
 }
 
@@ -149,11 +149,10 @@ function update(){
     const text = getText();
     const mode = modeSelect.value;
 
-    let highlightedHTML = "";
+    let html = "";
     let fixedText = "";
 
     for (let char of text) {
-
         let replaced = char;
         let changed = false;
 
@@ -169,17 +168,11 @@ function update(){
             }
         }
 
-        // подсветка только изменяемых букв
-        if (changed) {
-            highlightedHTML += `<span class="highlight">${char}</span>`;
-        } else {
-            highlightedHTML += char;
-        }
-
+        html += changed ? `<span class="highlight">${char}</span>` : char;
         fixedText += replaced;
     }
 
-    editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>");
+    editor.innerHTML = html.replace(/\n/g,"<br>");
     setCaretToEnd(editor);
 
     fixed.textContent = fixedText || "—";
@@ -197,12 +190,22 @@ editor.addEventListener("input", update);
 modeSelect.addEventListener("change", update);
 
 function clearText(){
-    editor.innerHTML="";
+    editor.innerHTML = "";
     update();
 }
 
 function copyText(){
     navigator.clipboard.writeText(fixed.textContent);
+}
+
+function copyWithChanges(){
+    const commandText = fixed.textContent
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .join(" && ");
+
+    navigator.clipboard.writeText(commandText);
 }
 
 update();
