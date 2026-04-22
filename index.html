@@ -1,1 +1,212 @@
-<!DOCTYPE html> <html lang="ru"> <head> <meta charset="UTF-8"> <title>Новая вкладка</title> <style> * { box-sizing: border-box; } body{ margin:0; font-family:Segoe UI, Arial, sans-serif; background:#000; color:#ddd; } .topbar{ background:#0b0b0b; padding:15px 20px; border-bottom:1px solid #222; } .label{ font-size:14px; margin-bottom:6px; color:#aaa; } .editor{ width:100%; min-height:160px; background:#111; border:1px solid #333; color:#eee; padding:10px; font-size:14px; line-height:1.5em; outline:none; white-space:pre-wrap; overflow-wrap:break-word; } .highlight{ background:#b30000; color:#fff; } .buttons{ margin-top:10px; } button, select{ background:#111; border:1px solid #333; color:#ddd; padding:6px 12px; margin-right:6px; cursor:pointer; } button:hover, select:hover{ background:#222; } .container{ padding:20px; } .panel{ background:#050505; border:1px solid #222; padding:15px; margin-bottom:15px; white-space:pre-wrap; overflow-wrap:break-word; } .fixed{ background:#021902; } .title{ margin-bottom:6px; color:#aaa; } </style> </head> <body> <div class="topbar"> <div class="label">Текст для изменений</div> <div id="editor" class="editor" contenteditable="true"></div> <div class="buttons"> <select id="mode"> <option value="ru-en">RU → EN</option> <option value="en-ru">EN → RU</option> </select> <button onclick="clearText()">Очистить</button> <button onclick="copyText()">Копировать текст</button> </div> </div> <div class="container"> <div class="title">Текст с изменениями</div> <div id="fixed" class="panel fixed"></div> <div class="title">Команды</div> <div id="command" class="panel fixed"></div> </div> <script> const editor = document.getElementById("editor"); const fixed = document.getElementById("fixed"); const commandDiv = document.getElementById("command"); const modeSelect = document.getElementById("mode"); // RU → EN const ruToEn = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z', 'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z' }; // EN → RU const enToRu = { 'a':'а','o':'о','e':'е','y':'у','c':'с', 'A':'А','O':'О','E':'Е','Y':'У','C':'С' }; function getText() { return editor.innerText; } function setCaretToEnd(el){ const range = document.createRange(); const sel = window.getSelection(); range.selectNodeContents(el); range.collapse(false); sel.removeAllRanges(); sel.addRange(range); } function update(){ const text = getText(); const mode = modeSelect.value; let highlightedHTML = ""; let fixedText = ""; for (let char of text) { let replaced = char; let changed = false; if (mode === "ru-en") { if (ruToEn[char]) { replaced = ruToEn[char]; changed = true; } } else { if (enToRu[char]) { replaced = enToRu[char]; changed = true; } } // подсветка только изменяемых букв if (changed) { highlightedHTML += <span class="highlight">${char}</span>; } else { highlightedHTML += char; } fixedText += replaced; } editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>"); setCaretToEnd(editor); fixed.textContent = fixedText || "—"; const commandText = fixedText .split(/\r?\n/) .map(l=>l.trim()) .filter(Boolean) .join(" && "); commandDiv.textContent = commandText || "—"; } editor.addEventListener("input", update); modeSelect.addEventListener("change", update); function clearText(){ editor.innerHTML=""; update(); } function copyText(){ navigator.clipboard.writeText(fixed.textContent); } update(); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Новая вкладка</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body{
+    margin:0;
+    font-family:Segoe UI, Arial, sans-serif;
+    background:#000;
+    color:#ddd;
+}
+
+.topbar{
+    background:#0b0b0b;
+    padding:15px 20px;
+    border-bottom:1px solid #222;
+}
+
+.label{
+    font-size:14px;
+    margin-bottom:6px;
+    color:#aaa;
+}
+
+.editor{
+    width:100%;
+    min-height:160px;
+    background:#111;
+    border:1px solid #333;
+    color:#eee;
+    padding:10px;
+    font-size:14px;
+    line-height:1.5em;
+    outline:none;
+    white-space:pre-wrap;
+    overflow-wrap:break-word;
+}
+
+.highlight{
+    background:#b30000;
+    color:#fff;
+}
+
+.buttons{
+    margin-top:10px;
+}
+
+button, select{
+    background:#111;
+    border:1px solid #333;
+    color:#ddd;
+    padding:6px 12px;
+    margin-right:6px;
+    cursor:pointer;
+}
+
+button:hover, select:hover{
+    background:#222;
+}
+
+.container{
+    padding:20px;
+}
+
+.panel{
+    background:#050505;
+    border:1px solid #222;
+    padding:15px;
+    margin-bottom:15px;
+    white-space:pre-wrap;
+    overflow-wrap:break-word;
+}
+
+.fixed{
+    background:#021902;
+}
+
+.title{
+    margin-bottom:6px;
+    color:#aaa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+<div class="label">Текст для изменений</div>
+
+<div id="editor" class="editor" contenteditable="true"></div>
+
+<div class="buttons">
+<select id="mode">
+    <option value="ru-en">RU → EN</option>
+    <option value="en-ru">EN → RU</option>
+</select>
+
+<button onclick="clearText()">Очистить</button>
+<button onclick="copyText()">Копировать текст</button>
+</div>
+</div>
+
+<div class="container">
+
+<div class="title">Текст с изменениями</div>
+<div id="fixed" class="panel fixed"></div>
+
+<div class="title">Команды</div>
+<div id="command" class="panel fixed"></div>
+
+</div>
+
+<script>
+const editor = document.getElementById("editor");
+const fixed = document.getElementById("fixed");
+const commandDiv = document.getElementById("command");
+const modeSelect = document.getElementById("mode");
+
+// RU → EN 
+const ruToEn = {
+    'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
+    'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
+};
+
+// EN → RU
+const enToRu = {
+    'a':'а','o':'о','e':'е','y':'у','c':'с',
+    'A':'А','O':'О','E':'Е','Y':'У','C':'С'
+};
+
+function getText() {
+    return editor.innerText;
+}
+
+function setCaretToEnd(el){
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function update(){
+    const text = getText();
+    const mode = modeSelect.value;
+
+    let highlightedHTML = "";
+    let fixedText = "";
+
+    for (let char of text) {
+
+        let replaced = char;
+        let changed = false;
+
+        if (mode === "ru-en") {
+            if (ruToEn[char]) {
+                replaced = ruToEn[char];
+                changed = true;
+            }
+        } else {
+            if (enToRu[char]) {
+                replaced = enToRu[char];
+                changed = true;
+            }
+        }
+
+        // подсветка только изменяемых букв
+        if (changed) {
+            highlightedHTML += `<span class="highlight">${char}</span>`;
+        } else {
+            highlightedHTML += char;
+        }
+
+        fixedText += replaced;
+    }
+
+    editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>");
+    setCaretToEnd(editor);
+
+    fixed.textContent = fixedText || "—";
+
+    const commandText = fixedText
+        .split(/\r?\n/)
+        .map(l=>l.trim())
+        .filter(Boolean)
+        .join(" && ");
+
+    commandDiv.textContent = commandText || "—";
+}
+
+editor.addEventListener("input", update);
+modeSelect.addEventListener("change", update);
+
+function clearText(){
+    editor.innerHTML="";
+    update();
+}
+
+function copyText(){
+    navigator.clipboard.writeText(fixed.textContent);
+}
+
+update();
+</script>
+
+</body>
+</html>
