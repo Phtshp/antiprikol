@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Новая вкладка</title>
+<title>Редактор</title>
 
 <style>
 * { box-sizing: border-box; }
@@ -26,25 +26,70 @@ body{
     color:#aaa;
 }
 
-.editor{
+/* WRAPPER */
+.editor-wrap{
+    position:relative;
     width:100%;
     min-height:160px;
-    background:#111;
-    border:1px solid #333;
-    color:#eee;
+}
+
+/* OVERLAY */
+.highlight-layer{
+    position:absolute;
+    inset:0;
+
     padding:10px;
     font-size:14px;
     line-height:1.5em;
+
+    white-space:pre-wrap;
+    overflow-wrap:break-word;
+
+    background:#111;
+    border:1px solid #333;
+    color:#ddd;
+
+    overflow:hidden;
+
+    pointer-events:none;
+
+    font-family:inherit;
+    tab-size:4;
+}
+
+/* TEXT INPUT (ВИДИМЫЙ!) */
+textarea{
+    position:absolute;
+    inset:0;
+
+    padding:10px;
+    font-size:14px;
+    line-height:1.5em;
+
+    border:1px solid #333;
+    background:transparent;
+
+    color:#fff;
+    caret-color:#fff;
+
     outline:none;
+    resize:none;
+
+    font-family:inherit;
+    tab-size:4;
+
+    overflow:auto;
     white-space:pre-wrap;
     overflow-wrap:break-word;
 }
 
+/* highlight */
 .highlight{
     background:#b30000;
     color:#fff;
 }
 
+/* buttons */
 .buttons{
     margin-top:10px;
 }
@@ -91,7 +136,10 @@ button:hover, select:hover{
 <div class="topbar">
 <div class="label">Текст для изменений</div>
 
-<div id="editor" class="editor" contenteditable="true"></div>
+<div class="editor-wrap">
+    <div id="highlight" class="highlight-layer"></div>
+    <textarea id="editor"></textarea>
+</div>
 
 <div class="buttons">
 <select id="mode">
@@ -101,6 +149,7 @@ button:hover, select:hover{
 
 <button onclick="clearText()">Очистить</button>
 <button onclick="copyText()">Копировать текст</button>
+<button onclick="copyWithChanges()">Копировать с изменениями</button>
 </div>
 </div>
 
@@ -116,93 +165,79 @@ button:hover, select:hover{
 
 <script>
 const editor = document.getElementById("editor");
+const highlight = document.getElementById("highlight");
 const fixed = document.getElementById("fixed");
 const commandDiv = document.getElementById("command");
 const modeSelect = document.getElementById("mode");
 
-// RU → EN 
 const ruToEn = {
-    'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
-    'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
+'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X','У':'Y','З':'Z',
+'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x','у':'y','з':'z'
 };
 
-// EN → RU
 const enToRu = {
-    'a':'а','o':'о','e':'е','y':'у','c':'с',
-    'A':'А','O':'О','E':'Е','Y':'У','C':'С'
+'a':'а','o':'о','e':'е','y':'у','c':'с',
+'A':'А','O':'О','E':'Е','Y':'У','C':'С'
 };
 
-function getText() {
-    return editor.innerText;
-}
-
-function setCaretToEnd(el){
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
+function transform(ch, mode){
+    if(mode==="ru-en") return ruToEn[ch] || ch;
+    return enToRu[ch] || ch;
 }
 
 function update(){
-    const text = getText();
+    const text = editor.value;
     const mode = modeSelect.value;
 
-    let highlightedHTML = "";
+    let html = "";
     let fixedText = "";
 
-    for (let char of text) {
+    for (let ch of text){
+        const replaced = transform(ch, mode);
+        const changed = replaced !== ch;
 
-        let replaced = char;
-        let changed = false;
-
-        if (mode === "ru-en") {
-            if (ruToEn[char]) {
-                replaced = ruToEn[char];
-                changed = true;
-            }
-        } else {
-            if (enToRu[char]) {
-                replaced = enToRu[char];
-                changed = true;
-            }
-        }
-
-        // подсветка только изменяемых букв
-        if (changed) {
-            highlightedHTML += `<span class="highlight">${char}</span>`;
-        } else {
-            highlightedHTML += char;
-        }
-
+        html += changed ? `<span class="highlight">${ch}</span>` : ch;
         fixedText += replaced;
     }
 
-    editor.innerHTML = highlightedHTML.replace(/\n/g,"<br>");
-    setCaretToEnd(editor);
-
+    highlight.innerHTML = html || "";
     fixed.textContent = fixedText || "—";
 
-    const commandText = fixedText
-        .split(/\r?\n/)
-        .map(l=>l.trim())
+    const cmd = fixedText
+        .split(/\n/)
+        .map(l => l.trim())
         .filter(Boolean)
         .join(" && ");
 
-    commandDiv.textContent = commandText || "—";
+    commandDiv.textContent = cmd || "—";
 }
 
 editor.addEventListener("input", update);
 modeSelect.addEventListener("change", update);
 
+/* синхронизация скролла */
+editor.addEventListener("scroll", () => {
+    highlight.scrollTop = editor.scrollTop;
+    highlight.scrollLeft = editor.scrollLeft;
+});
+
 function clearText(){
-    editor.innerHTML="";
+    editor.value = "";
     update();
 }
 
 function copyText(){
     navigator.clipboard.writeText(fixed.textContent);
+}
+
+function copyWithChanges(){
+    const cmd = fixed.textContent
+        .split(/\n/)
+        .map(l => l.trim())
+        .filter(Boolean)
+        .join(" && ");
+
+    navigator.clipboard.writeText(cmd);
 }
 
 update();
